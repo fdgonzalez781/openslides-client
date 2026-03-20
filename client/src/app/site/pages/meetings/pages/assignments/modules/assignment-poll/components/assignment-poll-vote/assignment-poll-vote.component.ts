@@ -6,7 +6,7 @@ import {
     BasePollVoteComponent,
     VoteOption
 } from 'src/app/site/pages/meetings/modules/poll/components/base-poll-vote/base-poll-vote.component';
-import { ViewAssignment } from 'src/app/site/pages/meetings/pages/assignments';
+import { ViewAssignment, ViewAssignmentCandidate } from 'src/app/site/pages/meetings/pages/assignments';
 import { ViewOption } from 'src/app/site/pages/meetings/pages/polls';
 import { MeetingSettingsService } from 'src/app/site/pages/meetings/services/meeting-settings.service';
 import { ViewUser } from 'src/app/site/pages/meetings/view-models/view-user';
@@ -152,4 +152,6 @@ export class AssignmentPollVoteComponent extends BasePollVoteComponent<ViewAssig
         }
         return false;
     }
+
+    public async removeCandidate(candidate: ViewAssignmentCandidate): Promise<void> {}
 }

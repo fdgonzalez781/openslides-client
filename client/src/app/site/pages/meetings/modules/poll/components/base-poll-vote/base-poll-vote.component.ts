@@ -1,8 +1,11 @@
 import { ChangeDetectorRef, Directive, inject, Input, OnInit } from '@angular/core';
-import { UntypedFormControl, Validators } from '@angular/forms';
+import { UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, Validators } from '@angular/forms';
 import { _ } from '@ngx-translate/core';
 import { BehaviorSubject, combineLatest, debounceTime, distinctUntilChanged, Observable, Subscription } from 'rxjs';
 import { Id } from 'src/app/domain/definitions/key-types';
+import { Selectable } from 'src/app/domain/interfaces';
+import { UserSelectionData } from 'src/app/site/pages/meetings/modules/participant-search-selector/index';
+import { ParticipantControllerService } from 'src/app/site/pages/meetings/pages/participants/services/common/participant-controller.service/participant-controller.service';
 import {
     GlobalVote,
     IdentifiedVotingData,
@@ -13,7 +16,10 @@ import {
     VotingData
 } from 'src/app/domain/models/poll';
 import { BaseComponent } from 'src/app/site/base/base.component';
+import { BaseViewModel } from 'src/app/site/base/base-view-model';
 import { PollControllerService } from 'src/app/site/pages/meetings/modules/poll/services/poll-controller.service';
+import { AssignmentControllerService } from 'src/app/site/pages/meetings/pages/assignments/services/assignment-controller.service';
+// import { AssignmentCandidateControllerService } from 'src/app/site/pages/meetings/pages/assignments/pages/assignment-detail/services/assignment-candidate-controller.service';
 import { ViewOption, ViewPoll } from 'src/app/site/pages/meetings/pages/polls';
 import { ViewUser } from 'src/app/site/pages/meetings/view-models/view-user';
 import { OperatorService } from 'src/app/site/services/operator.service';
@@ -45,6 +51,9 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
     public set poll(value: ViewPoll<C>) {
         this._poll = value;
         this.updatePoll();
+	this.candidates = value.options.map(it => it.content_object);
+	this.filterCandidates();
+	// this.onSortingChange(value.options.map(it => it.content_object));
     }
 
     public get poll(): ViewPoll<C> {
@@ -60,6 +69,40 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 
     public PollType = PollType;
     public formControlMap: Record<number, UntypedFormControl> = {};
+
+    public candidatesForm: UntypedFormGroup;
+    public placeholder = this.translate.instant(`Select candidate to rank`);
+    public candidates: PollContentObject[] = [];
+
+    private _sortedOptionContents: PollContentObject[] = [];
+    private _filteredCandidatesSubject = new BehaviorSubject<PollContentObject[]>([]);
+    private _nonSelectableUserIds: number[] = [];
+
+    public get sortedOptionContents() {
+	return this._sortedOptionContents;
+    }
+    
+    public get filteredCandidatesSubject(): BehaviorSubject<PollContentObject[]> {
+	return this._filteredCandidatesSubject;
+    }
+
+    public set nonSelectableUserIds(userIds: number[]) {
+	this._nonSelectableUserIds = userIds;
+	this.filterCandidates();
+    }
+
+    private filterCandidates(): void {
+	const notAvailable = this._nonSelectableUserIds;
+	const availableUsers = this.candidates.filter(user => !notAvailable.includes(user.id));
+	this._filteredCandidatesSubject.next(availableUsers);
+    }
+
+    public onSortingChange(newContents: PollContentObject[]) {
+	this._sortedOptionContents = newContents;
+    }
+
+    public handleNotFound(): void {
+    }
 
     public get minVotes(): number {
         return this.poll.min_votes_amount;
@@ -152,12 +195,14 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
     private _canVoteForSubjectMap: Record<number, BehaviorSubject<boolean>> = {};
 
     private voteRepo = inject(VoteControllerService);
+    private userRepo = inject(ParticipantControllerService);
 
     protected votingService = inject(VotingService);
     protected cd = inject(ChangeDetectorRef);
     private pollRepo = inject(PollControllerService);
     private operator = inject(OperatorService);
     private viewport = inject(ViewPortService);
+    protected formBuilder = inject(UntypedFormBuilder);
     private votedSubscription: Subscription;
     private votedSubscriptionPollId: Id;
 
@@ -200,11 +245,49 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
                 this.cd.markForCheck();
             })
         );
+	this.candidatesForm = this.formBuilder.group({
+	    userId: null
+	});
     }
 
     public ngOnInit(): void {
         this.defineVoteOptions();
         this.cd.markForCheck();
+	this.subscriptions.push(
+	    this.candidatesForm.valueChanges.subscribe(async formResult => {
+		if (formResult?.userId && typeof formResult?.userId === `number`) {
+		    await this.processSelectedUser(formResult.userId);
+		    this.candidatesForm.reset();
+		}
+	    })
+	);
+    }
+
+    private processSelectedUser(userId: number): void {
+        if (this._filteredCandidatesSubject.value.some(user => user.id === userId)) {
+            this.removeUserFromSelectorList(userId);
+	    this.addCandidateToRankList(userId);
+        } else {
+            throw new Error(`Tried to select an unselectable user`);
+        }
+    }
+
+    private removeUserFromSelectorList(userId: number): void {
+	this.nonSelectableUserIds = [...this._nonSelectableUserIds, userId];
+    }
+
+    public async addCandidateToRankList(userId: number): Promise<void> {
+	const user = this.userRepo.getViewModel(userId) as unknown as PollContentObject;
+	this.onSortingChange([...this.sortedOptionContents, user]);
+    }
+
+    public async unrankCandidate(user: PollContentObject): Promise<void> {
+	this.nonSelectableUserIds = this._nonSelectableUserIds.filter(it => {
+		return it !== user.id
+	});
+	this.onSortingChange(this.sortedOptionContents.filter(it => {
+		return it.id !== user.id;
+	}));
     }
 
     private updatePollOptionTitleWidth(): void {
@@ -539,4 +622,5 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
             }
         }
     }
+
 }

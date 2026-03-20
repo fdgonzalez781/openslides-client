@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { OpenSlidesTranslationModule } from 'src/app/site/modules/translations';
 import { MeetingsComponentCollectorModule } from 'src/app/site/pages/meetings/modules/meetings-component-collector';
@@ -26,6 +27,8 @@ import { ExpandableContentWrapperComponent } from 'src/app/ui/modules/expandable
 import { IconContainerComponent } from 'src/app/ui/modules/icon-container';
 import { SearchSelectorModule } from 'src/app/ui/modules/search-selector';
 import { PipesModule } from 'src/app/ui/pipes';
+import { SortingModule } from 'src/app/ui/modules/sorting';
+import { ParticipantSearchSelectorModule } from 'src/app/site/pages/meetings/modules/participant-search-selector';
 
 import { AssignmentCommonServiceModule } from '../../services/assignment-common-service.module';
 import { AssignmentPollComponent } from './components/assignment-poll/assignment-poll.component';
@@ -66,12 +69,15 @@ const COMPONENTS = [
         MatIconModule,
         MatDividerModule,
         MatSelectModule,
+	MatTooltipModule,
         MatButtonModule,
         MatInputModule,
         SearchSelectorModule,
         PollModule,
         DirectivesModule,
         PipesModule,
+	SortingModule,
+	ParticipantSearchSelectorModule,
         ChoiceDialogComponent,
         MeetingsComponentCollectorModule,
         ExpandableContentWrapperComponent,

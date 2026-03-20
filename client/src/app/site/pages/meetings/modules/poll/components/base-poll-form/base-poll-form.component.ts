@@ -198,6 +198,10 @@ export abstract class BasePollFormComponent extends BaseComponent implements OnI
         return this.pollMethodControl.valueChanges.pipe(map(method => method === FormPollMethod.LIST_YNA));
     }
 
+    public get pollMethodChangedToSTVObservable(): Observable<boolean> {
+	return this.pollMethodControl.valueChanges.pipe(map(method => method === FormPollMethod.STV));
+    }
+
     public get isMotionPoll(): boolean {
         return this.pollClassType === PollClassType.Motion;
     }
@@ -363,7 +367,7 @@ export abstract class BasePollFormComponent extends BaseComponent implements OnI
         const selectedPollMethod: FormPollMethod = this.pollMethodControl.value;
         return (
             (selectedPollMethod === FormPollMethod.Y ||
-                (selectedPollMethod !== FormPollMethod.LIST_YNA && this.allowToSetMinMax)) &&
+                (selectedPollMethod !== FormPollMethod.STV && selectedPollMethod !== FormPollMethod.LIST_YNA && this.allowToSetMinMax)) &&
             (!data || !data.state || data.isCreated)
         );
     }

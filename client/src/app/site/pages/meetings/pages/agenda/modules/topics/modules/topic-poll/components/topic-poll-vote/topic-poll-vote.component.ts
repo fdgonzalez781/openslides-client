@@ -132,4 +132,6 @@ export class TopicPollVoteComponent extends BasePollVoteComponent<ViewTopic> {
                 return o;
             }, {});
     }
+
+    public async removeCandidate(_option: ViewOption): Promise<void> {}
 }

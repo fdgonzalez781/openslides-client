@@ -38,7 +38,7 @@ const COMPONENTS = [
     EntitledUsersTableComponent,
     SingleOptionChartTableComponent,
     VotesTableComponent,
-    PollCannotVoteMessageComponent
+    PollCannotVoteMessageComponent,
 ];
 
 @NgModule({
@@ -54,10 +54,10 @@ const COMPONENTS = [
         MatCheckboxModule,
         MatDividerModule,
         MatRadioModule,
-        ReactiveFormsModule,
         MatTooltipModule,
         IconContainerComponent,
         FormsModule,
+	ReactiveFormsModule,
         VotingPrivacyDialogModule,
         ListModule,
         DirectivesModule,

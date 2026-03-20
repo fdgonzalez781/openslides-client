@@ -25,6 +25,7 @@ import { CustomIconComponent } from 'src/app/ui/modules/custom-icon';
 import { IconContainerComponent } from 'src/app/ui/modules/icon-container';
 import { SearchSelectorModule } from 'src/app/ui/modules/search-selector';
 import { PipesModule } from 'src/app/ui/pipes';
+import { SortingModule } from 'src/app/ui/modules/sorting';
 
 import { MotionPollComponent } from './components/motion-poll/motion-poll.component';
 import { MotionPollDetailContentComponent } from './components/motion-poll-detail-content/motion-poll-detail-content.component';
@@ -67,6 +68,7 @@ const MODULES = [MotionPollServiceModule];
         ReactiveFormsModule,
         FormsModule,
         PipesModule,
+	SortingModule,
         DirectivesModule,
         PollModule,
         MeetingsComponentCollectorModule,

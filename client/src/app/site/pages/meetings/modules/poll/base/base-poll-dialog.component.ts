@@ -96,6 +96,7 @@ export abstract class BasePollDialogComponent extends BaseUiComponent implements
     }
 
     private isList = false;
+    private isSTV = false;
 
     protected formBuilder = inject(UntypedFormBuilder);
     public dialogRef = inject(MatDialogRef<BasePollDialogComponent>);
@@ -112,6 +113,10 @@ export abstract class BasePollDialogComponent extends BaseUiComponent implements
             this.isList = isList;
             this.triggerUpdate(true);
         });
+	this.pollForm.pollMethodChangedToSTVObservable.pipe(distinctUntilChanged()).subscribe(isSTV => {
+	    this.isSTV = isSTV;
+	    this.triggerUpdate(true);
+	});
     }
 
     private addKeyListener(): void {
@@ -146,6 +151,10 @@ export abstract class BasePollDialogComponent extends BaseUiComponent implements
             payload.min_votes_amount = 1;
             payload.max_votes_amount = 1;
         }
+	if (this.isSTV) {
+	    payload.min_votes_amount = 1;
+	    payload.max_votes_amount = this._options.length;
+	}
     }
 
     /**

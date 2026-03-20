@@ -7,7 +7,8 @@ export const AssignmentPollMethodVerbose = {
     N: _(`No per candidate`),
     YN: _(`Yes/No per candidate`),
     YNA: _(`Yes/No/Abstain per candidate`),
-    yna: _(`Yes/No/Abstain per list`)
+    yna: _(`Yes/No/Abstain per list`),
+    STV: _(`Scottish STV`)
 };
 
 export const AssignmentPollPercentBaseVerbose = {

@@ -58,4 +58,6 @@ export class MotionPollVoteComponent extends BasePollVoteComponent {
     public override shouldStrikeOptionText(_option: ViewOption, _user: ViewUser): boolean {
         return false;
     }
+
+    public async removeCandidate(_option: ViewOption): Promise<void> {}
 }

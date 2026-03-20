@@ -131,6 +131,10 @@ export class Poll extends BaseDecimalModel<Poll> {
         return this.pollmethod === PollMethod.YNA;
     }
 
+    public get isMethodSTV(): boolean {
+	return this.pollmethod === PollMethod.STV;
+    }
+
     public get hasGlobalOptionEnabled(): boolean {
         return this.global_yes || this.global_no || this.global_abstain;
     }

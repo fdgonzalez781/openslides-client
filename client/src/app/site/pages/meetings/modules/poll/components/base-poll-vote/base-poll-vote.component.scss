@@ -1,3 +1,4 @@
+@use 'src/assets/styles/variables.scss';
 @use 'src/assets/styles/poll-colors.scss';
 @use 'src/assets/styles/poll-styles-common.scss';
 
@@ -268,4 +269,25 @@
 
 .text-right {
     text-align: right;
+}
+
+.candidates-list {
+    padding: 15px 25px 0 25px;
+
+    @include variables.phone {
+        padding: 15px 0 0 0;
+    }
+
+    .single-candidate-line {
+        display: grid;
+        grid-template-columns: auto min-content;
+        grid-column-gap: 0.5em;
+
+        span {
+            margin: auto 0;
+        }
+    }
+    .deleted-candidate {
+        color: slategrey;
+    }
 }
