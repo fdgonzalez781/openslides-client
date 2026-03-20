@@ -51,9 +51,13 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
     public set poll(value: ViewPoll<C>) {
         this._poll = value;
         this.updatePoll();
-	this.candidates = value.options.map(it => it.content_object);
+	value.options.forEach(option => {
+	    const user = option.getContentObject();
+	    this._userToOptionId[user.id] = option.id;
+	    this.candidates.push(user);
+	});
+	this._candidateOptionIds = value.options.map(it => it.id);
 	this.filterCandidates();
-	// this.onSortingChange(value.options.map(it => it.content_object));
     }
 
     public get poll(): ViewPoll<C> {
@@ -77,6 +81,8 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
     private _sortedOptionContents: PollContentObject[] = [];
     private _filteredCandidatesSubject = new BehaviorSubject<PollContentObject[]>([]);
     private _nonSelectableUserIds: number[] = [];
+    private _userToOptionId: Record<number, number> = {};
+    private _candidateOptionIds: number[] = [];
 
     public get sortedOptionContents() {
 	return this._sortedOptionContents;
@@ -97,8 +103,9 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 	this._filteredCandidatesSubject.next(availableUsers);
     }
 
-    public onSortingChange(newContents: PollContentObject[]) {
+    public onSortingChange(newContents: PollContentObject[], user: ViewUser = this.user) {
 	this._sortedOptionContents = newContents;
+	this.saveRankedChoice(newContents.map(it => it.id), user);
     }
 
     public handleNotFound(): void {
@@ -256,17 +263,17 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 	this.subscriptions.push(
 	    this.candidatesForm.valueChanges.subscribe(async formResult => {
 		if (formResult?.userId && typeof formResult?.userId === `number`) {
-		    await this.processSelectedUser(formResult.userId);
+		    await this.processSelectedUser(formResult.userId, this.user);
 		    this.candidatesForm.reset();
 		}
 	    })
 	);
     }
 
-    private processSelectedUser(userId: number): void {
-        if (this._filteredCandidatesSubject.value.some(user => user.id === userId)) {
+    private processSelectedUser(userId: number, user: ViewUser): void {
+        if (this._filteredCandidatesSubject.value.some(it => it.id === userId)) {
             this.removeUserFromSelectorList(userId);
-	    this.addCandidateToRankList(userId);
+	    this.addCandidateToRankList(userId, user);
         } else {
             throw new Error(`Tried to select an unselectable user`);
         }
@@ -276,18 +283,18 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 	this.nonSelectableUserIds = [...this._nonSelectableUserIds, userId];
     }
 
-    public async addCandidateToRankList(userId: number): Promise<void> {
-	const user = this.userRepo.getViewModel(userId) as unknown as PollContentObject;
-	this.onSortingChange([...this.sortedOptionContents, user]);
+    public async addCandidateToRankList(userId: number, user: ViewUser): Promise<void> {
+	const candidateUser = this.userRepo.getViewModel(userId) as unknown as PollContentObject;
+	this.onSortingChange([...this.sortedOptionContents, candidateUser], user);
     }
 
-    public async unrankCandidate(user: PollContentObject): Promise<void> {
+    public async unrankCandidate(candidate: PollContentObject, user: ViewUser): Promise<void> {
 	this.nonSelectableUserIds = this._nonSelectableUserIds.filter(it => {
-		return it !== user.id
+		return it !== candidate.id
 	});
 	this.onSortingChange(this.sortedOptionContents.filter(it => {
-		return it.id !== user.id;
-	}));
+		return it.id !== candidate.id;
+	}), user);
     }
 
     private updatePollOptionTitleWidth(): void {
@@ -449,6 +456,14 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 
     public abstract saveSingleVote(optionId: number, vote: VoteValue, user: ViewUser): void;
     public abstract shouldStrikeOptionText(option: ViewOption, user: ViewUser): boolean;
+
+    public saveRankedChoice(ranking: number[], user: ViewUser): void {
+        if (!this.voteRequestData[user.id]) {
+            throw new Error(`The user for your voting request does not exist`);
+        }
+
+	this.voteRequestData[user.id].value = this.rankOrderingToRecord(ranking);
+    }
 
     protected async sendVote(userId: Id, votePayload: any): Promise<void> {
         try {
@@ -623,4 +638,23 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
         }
     }
 
+    /** 
+     * Converts a ranking in the form of an ordered list of candidates to
+     * a record that associates each candidate's option ID with its numbered rank.
+     */
+    private rankOrderingToRecord(ranking: number[]): Record<number, number> {
+	const scores: Record<number, number> = {};
+
+	/** Initialize empty ballot */
+	this._candidateOptionIds.forEach(optionId => {
+	    scores[optionId] = 0;
+	});
+	
+	ranking.forEach((userId, i) => {
+	    const optionId = this._userToOptionId[userId];
+	    scores[optionId] = i+1;
+	});
+
+	return scores;
+    }
 }

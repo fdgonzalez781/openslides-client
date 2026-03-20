@@ -77,7 +77,7 @@
 			            [count]="true"
                                     [input]="sortedOptionContents"
                                     [live]="true"
-			            (sortEvent)="onSortingChange($event)"
+			            (sortEvent)="onSortingChange($event, delegation)"
                                 >
                                     <!-- implicit item references into the component using ng-template slot -->
                                     <ng-template let-item>
@@ -92,7 +92,7 @@
                                                 <button
                                                     mat-icon-button
                                                     matTooltip="{{ 'Remove candidate' | translate }}"
-                                                    (click)="unrankCandidate(item)"
+                                                    (click)="unrankCandidate(item, delegation)"
                                                 >
                                                     <mat-icon>clear</mat-icon>
                                                 </button>
