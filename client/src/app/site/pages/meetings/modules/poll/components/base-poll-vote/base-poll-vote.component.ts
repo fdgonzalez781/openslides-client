@@ -54,8 +54,8 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 	value.options.forEach(option => {
 	    const user = option.getContentObject();
 	    this._userToOptionId[user.id] = option.id;
-	    this.candidates.push(user);
 	});
+	this.candidates = value.options.map(it => it.getContentObject());
 	this._candidateOptionIds = value.options.map(it => it.id);
 	this.filterCandidates();
     }
@@ -108,8 +108,7 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
 	this.saveRankedChoice(newContents.map(it => it.id), user);
     }
 
-    public handleNotFound(): void {
-    }
+    public handleNotFound(): void {}
 
     public get minVotes(): number {
         return this.poll.min_votes_amount;
@@ -413,6 +412,8 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
             user_id: user.id
         };
 
+	console.log("hi!!!");
+	console.log(votePayload);
         await this.sendVote(user.id, votePayload);
     }
 
