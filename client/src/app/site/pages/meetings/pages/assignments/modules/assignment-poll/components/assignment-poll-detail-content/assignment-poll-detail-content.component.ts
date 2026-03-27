@@ -104,8 +104,12 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
         return this.method === PollMethod.YNA;
     }
 
+    public get isMethodSTV(): boolean {
+        return this.method === PollMethod.STV;
+    }
+
     public get classOptionAmount(): string {
-        if (this.isMethodY || this.isMethodN) {
+        if (this.isMethodY || this.isMethodN || this.isMethodSTV) {
             return `row-1`;
         } else if (this.isMethodYN) {
             return `row-2`;
@@ -263,7 +267,7 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
         if (!result.vote) {
             return true;
         }
-        if (this.isMethodY) {
+        if (this.isMethodY || this.isMethodSTV) {
             return result.vote === `yes`;
         } else if (this.isMethodN) {
             return result.vote === `no`;
