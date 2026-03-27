@@ -8,6 +8,7 @@ export class Vote extends BaseModel<Vote> {
 
     public weight!: number;
     public value!: VoteValue;
+    public rank!: number;
 
     public option_id!: Id; // (assignment|motion)_option/vote_ids;
     public user_id!: Id; // user/vote_ids;
@@ -31,6 +32,7 @@ export class Vote extends BaseModel<Vote> {
         `id`,
         `weight`,
         `value`,
+        `rank`,
         `user_token`,
         `option_id`,
         `user_id`,

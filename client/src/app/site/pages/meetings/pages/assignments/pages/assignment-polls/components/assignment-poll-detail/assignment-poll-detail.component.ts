@@ -68,9 +68,7 @@ export class AssignmentPollDetailComponent
     protected createVotesData(): BaseVoteData[] {
         const votes: any = {};
         const pollOptions: ViewOption<ViewAssignment>[] = this.poll.options;
-        console.log("Entered createVotesData")
         for (const option of pollOptions) {
-            console.log(option.votes)
             for (const vote of option.votes) {
                 const token = vote.user_token;
                 if (!token) {
@@ -85,10 +83,11 @@ export class AssignmentPollDetailComponent
                     };
                 }
 
-                console.log(vote)
                 if (vote.weight > 0) {
                     const optionContent: ViewUser | SortedList = option.content_object;
-                    if (this.poll.isMethodY || this.poll.isMethodSTV) {
+                    if (this.poll.isMethodSTV) {
+                        votes[token].votes.push(`${vote.rank}. ${this.getMethodYVoteLabel(vote, optionContent)}`);
+                    } else if (this.poll.isMethodY) {
                         votes[token].votes.push(this.getMethodYVoteLabel(vote, optionContent));
                     } else {
                         const candidate_name = isSortedList(optionContent)
@@ -111,11 +110,18 @@ export class AssignmentPollDetailComponent
                 };
             }
         }
-        console.log(votes)
-        // if (this.poll.isMethodSTV) {
-        //     for (const vote of this)
-        //     votes[vote.user_token].sort((a, b) => a.rank - b.rank)
-        // }
+        // Sort by rank
+        if (this.poll.isMethodSTV) {
+            for (const option of pollOptions) {
+                for (const vote of option.votes) {
+                    const token = vote.user_token;
+                    if (!token) {
+                        throw new Error(`assignment_vote/${vote.id} does not contain a user_token`);
+                    }
+                    votes[token].votes.sort((a, b) => +a.substring(0, 1) - +b.substring(0, 1))
+                }
+            }
+        }
         return Object.values(votes);
     }
 
