@@ -6,7 +6,7 @@ export type VoteValue = `Y` | `N` | `A`;
 export type IdentifiedVotingData = Record<number, VotingData>;
 
 export interface VotingData {
-    value: Record<number, number> | VoteValue;
+    value: number[] | Record<number, number> | VoteValue;
 }
 
 export const VoteValueVerbose = {

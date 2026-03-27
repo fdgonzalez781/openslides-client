@@ -335,7 +335,14 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
                 return Object.keys(this.voteRequestData[user.id].value)
                     .map(key => parseInt(this.voteRequestData[user.id].value[+key] as string, 10))
                     .reduce((a, b) => a + b, 0);
-            } else {
+            } else if (this.poll.isMethodSTV) {
+		console.log(this.voteRequestData[user.id])
+		if (!Array.isArray(this.voteRequestData[user.id].value)) {
+		    return 0
+		} else {
+		    return (this.voteRequestData[user.id].value as number[]).length
+		}
+	    } else {
                 return Object.keys(this.voteRequestData[user.id].value).filter(
                     key => this.voteRequestData[user.id].value[+key]
                 ).length;
@@ -463,7 +470,7 @@ export abstract class BasePollVoteComponent<C extends PollContentObject = any> e
             throw new Error(`The user for your voting request does not exist`);
         }
 
-	this.voteRequestData[user.id].value = this.rankOrderingToRecord(ranking);
+	this.voteRequestData[user.id].value = ranking.map(it => this._userToOptionId[it]);
     }
 
     protected async sendVote(userId: Id, votePayload: any): Promise<void> {

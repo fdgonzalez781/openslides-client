@@ -68,7 +68,9 @@ export class AssignmentPollDetailComponent
     protected createVotesData(): BaseVoteData[] {
         const votes: any = {};
         const pollOptions: ViewOption<ViewAssignment>[] = this.poll.options;
+        console.log("Entered createVotesData")
         for (const option of pollOptions) {
+            console.log(option.votes)
             for (const vote of option.votes) {
                 const token = vote.user_token;
                 if (!token) {
@@ -83,9 +85,10 @@ export class AssignmentPollDetailComponent
                     };
                 }
 
+                console.log(vote)
                 if (vote.weight > 0) {
                     const optionContent: ViewUser | SortedList = option.content_object;
-                    if (this.poll.isMethodY) {
+                    if (this.poll.isMethodY || this.poll.isMethodSTV) {
                         votes[token].votes.push(this.getMethodYVoteLabel(vote, optionContent));
                     } else {
                         const candidate_name = isSortedList(optionContent)
@@ -108,6 +111,11 @@ export class AssignmentPollDetailComponent
                 };
             }
         }
+        console.log(votes)
+        // if (this.poll.isMethodSTV) {
+        //     for (const vote of this)
+        //     votes[vote.user_token].sort((a, b) => a.rank - b.rank)
+        // }
         return Object.values(votes);
     }
 
