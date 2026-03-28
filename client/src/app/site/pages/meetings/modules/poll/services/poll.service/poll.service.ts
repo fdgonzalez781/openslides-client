@@ -58,6 +58,7 @@ export abstract class PollService {
     }
 
     public generateTableData(poll: PollData): PollTableData[] {
+        console.log(poll);
         const tableData: PollTableData[] = poll.options
             .sort((a, b) => {
                 if (this.sortByVote) {
@@ -358,6 +359,11 @@ export abstract class PollService {
                 vote: `votescast`,
                 hide: poll.votescast === VOTE_UNDOCUMENTED || poll.type !== PollType.Analog,
                 showPercent: poll.onehundred_percent_base === PollPercentBase.Cast
+            },
+            {
+                vote: `quota`,
+                hide: poll.pollmethod !== PollMethod.STV,
+                showPercent: true
             }
         ];
     }

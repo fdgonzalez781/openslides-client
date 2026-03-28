@@ -23,6 +23,7 @@ export class Poll extends BaseDecimalModel<Poll> {
     public state!: PollState;
     public type!: PollType;
     public title!: string;
+    public quota!: number;
     public votesvalid!: number;
     public votesinvalid!: number;
     public votescast!: number;
@@ -170,6 +171,7 @@ export class Poll extends BaseDecimalModel<Poll> {
         `global_no`,
         `global_abstain`,
         `onehundred_percent_base`,
+        `quota`,
         `votesvalid`,
         `votesinvalid`,
         `votescast`,

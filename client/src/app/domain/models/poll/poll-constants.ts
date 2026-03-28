@@ -152,6 +152,7 @@ export const PollPropertyVerbose = {
 export type PollPropertyVerboseKey = keyof typeof PollPropertyVerbose;
 
 export const PollValues: any = {
+    quota: `Quota`,
     votesvalid: `Valid votes`,
     votesinvalid: `Invalid votes`,
     votescast: `Total votes cast`,

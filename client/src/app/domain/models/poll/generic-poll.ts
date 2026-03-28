@@ -22,6 +22,7 @@ export interface PollData {
     votesvalid: number;
     votesinvalid: number;
     votescast: number;
+    quota: number;
     type: PollType;
     entitled_users_at_stop: EntitledUsersEntry[];
     options: OptionData[];
