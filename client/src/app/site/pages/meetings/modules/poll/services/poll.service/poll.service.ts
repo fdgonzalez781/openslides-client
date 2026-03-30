@@ -58,7 +58,6 @@ export abstract class PollService {
     }
 
     public generateTableData(poll: PollData): PollTableData[] {
-        console.log(poll);
         const tableData: PollTableData[] = poll.options
             .sort((a, b) => {
                 if (this.sortByVote) {

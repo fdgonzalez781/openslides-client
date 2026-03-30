@@ -8,12 +8,15 @@ export type ChartData = ChartDate[];
  * One single collection in an array.
  */
 export interface ChartDate {
+    type: ChartType;
     data: number[];
     label: string;
     backgroundColor?: string;
     hoverBackgroundColor?: string;
+    borderColor?: string;
     barThickness?: number;
     maxBarThickness?: number;
+    order?: number;
 }
 
 type SingleLineLabel = string;
@@ -80,9 +83,9 @@ export class ChartComponent {
             return {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    duration: 0
-                },
+                // animation: {
+                //     duration: 0
+                // },
                 plugins: {
                     tooltip: {
                         enabled: false
@@ -106,7 +109,13 @@ export class ChartComponent {
                             drawOnChartArea: false
                         },
                         beginAtZero: true,
-                        ticks: { stepSize: 1 },
+                        // ticks: { stepSize: 1 },
+                        ticks: {
+                            font: {
+                                family: "'OSFont Condensed', 'Fira Sans Condensed', 'Roboto-condensed', 'Arial', 'Helvetica', sans-serif",
+                                size: 16
+                            }
+                        },
                         stacked: true
                     },
                     y: {
@@ -114,24 +123,41 @@ export class ChartComponent {
                             drawOnChartArea: false,
                             drawTicks: false
                         },
-                        ticks: { mirror: true, labelOffset: -20 },
+                        ticks: {
+                            font: {
+                                family: "'OSFont Condensed', 'Fira Sans Condensed', 'Roboto-condensed', 'Arial', 'Helvetica', sans-serif",
+                                size: 16
+                            }
+                        },
+                        // ticks: { mirror: true, labelOffset: -20 },
                         stacked: true
                     }
                 },
                 plugins: {
                     tooltip: {
-                        enabled: false
+                        enabled: true
                     },
                     legend: {
-                        display: this.legend
-                    }
-                }
+                        display: this.legend,
+                        labels: {
+                            font: {
+                                family: "'OSFont Condensed', 'Fira Sans Condensed', 'Roboto-condensed', 'Arial', 'Helvetica', sans-serif"
+                            }
+                        }
+                    },
+                },
+                indexAxis: 'y',
+                elements: {
+                    point: {
+                        radius: 0
+                    },
+                },
             };
         }
     }
 
     public get isReadyToShow(): boolean {
-        return !!this.chartData.datasets.length;
+        return !!this.chartData.labels.length;
     }
 
     public get isCircle(): boolean {
@@ -193,6 +219,7 @@ export class ChartComponent {
             ];
         } else {
             this.chartData.datasets = inputChartData;
+            this.chartData.labels = this.labels;
         }
 
         if (!this.labels) {

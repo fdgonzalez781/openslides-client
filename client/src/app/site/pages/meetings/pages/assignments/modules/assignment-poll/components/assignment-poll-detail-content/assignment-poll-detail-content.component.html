@@ -69,6 +69,10 @@
                     }
                 </div>
 
+                @if (isMethodSTV) {
+                    <os-chart type="bar" [legend]="true" [data]="stvChartData" [labels]="stvChartLabels"></os-chart>
+                }
+
                 @for (row of tableData; track row; let i = $index) {
                     <div class="row" role="row" [class]="classOptionAmount">
                         <div

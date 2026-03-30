@@ -27,6 +27,7 @@ export class Poll extends BaseDecimalModel<Poll> {
     public votesvalid!: number;
     public votesinvalid!: number;
     public votescast!: number;
+    public round_by_round!: string[];
     public live_votes: Record<number, any>;
     public live_voting_enabled: number[];
     public onehundred_percent_base!: PollPercentBase;
@@ -133,7 +134,7 @@ export class Poll extends BaseDecimalModel<Poll> {
     }
 
     public get isMethodSTV(): boolean {
-	return this.pollmethod === PollMethod.STV;
+        return this.pollmethod === PollMethod.STV;
     }
 
     public get hasGlobalOptionEnabled(): boolean {
@@ -171,6 +172,7 @@ export class Poll extends BaseDecimalModel<Poll> {
         `global_no`,
         `global_abstain`,
         `onehundred_percent_base`,
+        `round_by_round`,
         `quota`,
         `votesvalid`,
         `votesinvalid`,
@@ -189,4 +191,4 @@ export class Poll extends BaseDecimalModel<Poll> {
     ];
 }
 
-export interface Poll extends HasMeetingId, HasProjectionIds, HasSequentialNumber {}
+export interface Poll extends HasMeetingId, HasProjectionIds, HasSequentialNumber { }

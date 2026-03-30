@@ -20,7 +20,7 @@ import {
     VotingResult
 } from 'src/app/domain/models/poll/poll-constants';
 import { Deferred } from 'src/app/infrastructure/utils/promises';
-import { ChartData } from 'src/app/site/pages/meetings/modules/poll/components/chart/chart.component';
+import { ChartData, ChartDate } from 'src/app/site/pages/meetings/modules/poll/components/chart/chart.component';
 import { PollService } from 'src/app/site/pages/meetings/modules/poll/services/poll.service';
 import { OperatorService } from 'src/app/site/services/operator.service';
 import { ThemeService } from 'src/app/site/services/theme.service';
@@ -28,6 +28,8 @@ import { ThemeService } from 'src/app/site/services/theme.service';
 import { ViewPoll } from '../../../../../polls';
 import { ViewAssignment } from '../../../../view-models';
 import { AssignmentPollService } from '../../services/assignment-poll.service';
+
+import { ChartTypeRegistry } from 'chart.js';
 
 @Component({
     selector: `os-assignment-poll-detail-content`,
@@ -43,6 +45,9 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
     private _tableData: PollTableData[] = [];
     private _chartData: ChartData = null;
     public reformedTableData: PollTableData[];
+
+    private _stvChartData: ChartData;
+    private _stvChartLabels: string[];
 
     @Input()
     public set poll(pollData: PollData) {
@@ -70,6 +75,14 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
 
     public get tableData(): PollTableData[] {
         return this._tableData;
+    }
+
+    public get stvChartData(): ChartData {
+        return this._stvChartData;
+    }
+
+    public get stvChartLabels(): string[] {
+        return this._stvChartLabels;
     }
 
     private get method(): string | null {
@@ -178,7 +191,7 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
         private cd: ChangeDetectorRef,
         private operator: OperatorService,
         private themeService: ThemeService
-    ) {}
+    ) { }
 
     public ngOnInit(): void {
         combineLatest([
@@ -234,6 +247,45 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
 
     private setChartData(): void {
         this._chartData = this.pollService.generateChartData(this.poll).filter(option => option.data[0] > 0);
+        const candidate_option_ids: number[][] = this.assignment?.candidatesAsUsers.map(it => it.option_ids.map(it => +it));
+        this._stvChartLabels = this.assignment?.candidatesAsUsers.map(it => it.name);
+
+        const colors = ["rgba(54, 162, 235, 0.8)", "rgba(254, 99, 131, 0.8)", "rgba(74, 192, 192, 0.8)", "rgba(255, 159, 64, 0.8)", "rgba(153, 102, 255, 0.8)", "rgba(255, 204, 85, 0.8)", "rgba(202, 203, 207, 0.8)"]
+
+        const stvData: ChartData = []
+        this.poll.round_by_round.map(it => {
+            const elements = it.split("/");
+            return {
+                round: +elements[0],
+                candidate: +elements[1],
+                votes: parseFloat(elements[2])
+            }
+        }).forEach(el => {
+            const index = candidate_option_ids.findIndex(arr => arr.includes(el.candidate));
+            console.log(`index: ${index}`);
+            if (index != -1) {
+                if (!stvData[el.round]) {
+                    const data = Array(index + 1).fill(0);
+                    data[index] = el.votes;
+                    stvData[el.round] = {
+                        type: "bar",
+                        data: data,
+                        label: `Round ${el.round + 1}`,
+                        backgroundColor: colors[el.round % 7]
+                    };
+                } else {
+                    stvData[el.round].data[index] = el.votes;
+                }
+            }
+        });
+        stvData.push({
+            type: "line",
+            data: Array(this._stvChartLabels.length).fill(this.poll.quota),
+            label: "Quota",
+            backgroundColor: "rgba(76, 175, 80, 0.8)",
+            borderColor: "rgba(76, 175, 80, 0.8)",
+        });
+        this._stvChartData = stvData;
     }
 
     public getVoteClass(votingResult: VotingResult): string {
