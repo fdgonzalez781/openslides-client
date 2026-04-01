@@ -18,8 +18,6 @@ Interaction.modes.customMode = function(chart, e, options, useFinalPosition) {
         let eliminatedCandidate = "";
         if (previousRound >= 0) {
             const data = chart.getDatasetMeta(previousRound).data;
-            console.log(items.map(it => it.element["$context"].raw.candidate));
-            // console.log(data);
             for (let i = 0; i < data.length; ++i) {
                 if (!items.map(it => it.element["$context"].raw.candidate).includes(data[i]["$context"].raw.candidate)) {
                     eliminatedCandidate = data[i]["$context"].raw.candidate;
@@ -183,7 +181,23 @@ export class ChartComponent {
                 },
                 plugins: {
                     tooltip: {
-                        enabled: true
+                        enabled: true,
+                        mode: 'dataset',
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                console.log(tooltipItem);
+                                let candidate = tooltipItem.label;
+                                let r = tooltipItem.datasetIndex;
+                                let total = 0;
+                                while (r >= 0) {
+                                    const data = tooltipItem.chart.getDatasetMeta(r).data.find(it => it["$context"].raw.candidate === candidate);
+                                    total += data["$context"].raw.votes;
+                                    r--;
+                                }
+
+                                return `${candidate}: ${total}`;
+                            },
+                        }
                     },
                     legend: {
                         display: this.legend,
@@ -207,10 +221,12 @@ export class ChartComponent {
                     xAxisKey: 'votes',
                     yAxisKey: 'candidate'
                 },
-                interaction: {
-                    // mode: 'dataset'
+                hover: {
                     mode: 'customMode'
                 },
+                // interaction: {
+                //     mode: 'customMode'
+                // },
             };
         }
     }
@@ -226,7 +242,6 @@ export class ChartComponent {
         const color = ctx.raw.color;
 
         if (ctx.active) {
-            // console.log(ctx);
             const latestRound = Math.max(...ctx.chart._active.map(it => it.datasetIndex));
             const next = ctx.raw.round + 1;
             const stillInRunning = ctx.chart.getDatasetMeta(next).data.map(it => it.$context.raw).some(it => it.candidate === ctx.raw.candidate);
