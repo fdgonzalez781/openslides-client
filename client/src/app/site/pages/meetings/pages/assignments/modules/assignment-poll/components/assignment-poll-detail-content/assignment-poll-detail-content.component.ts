@@ -29,8 +29,6 @@ import { ViewPoll } from '../../../../../polls';
 import { ViewAssignment } from '../../../../view-models';
 import { AssignmentPollService } from '../../services/assignment-poll.service';
 
-import { ChartTypeRegistry } from 'chart.js';
-
 @Component({
     selector: `os-assignment-poll-detail-content`,
     templateUrl: `./assignment-poll-detail-content.component.html`,
@@ -253,31 +251,63 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
         const colors = ["rgba(54, 162, 235, 0.8)", "rgba(254, 99, 131, 0.8)", "rgba(74, 192, 192, 0.8)", "rgba(255, 159, 64, 0.8)", "rgba(153, 102, 255, 0.8)", "rgba(255, 204, 85, 0.8)", "rgba(202, 203, 207, 0.8)"]
 
         const stvData: ChartData = []
-        this.poll.round_by_round.map(it => {
+        console.log(this.poll.round_by_round);
+        const rbrResults = this.poll.round_by_round.map(it => {
             const elements = it.split("/");
             return {
                 round: +elements[0],
                 candidate: +elements[1],
                 votes: parseFloat(elements[2])
             }
-        }).forEach(el => {
+        });
+        console.log(rbrResults);
+
+        const finalResults = rbrResults.reduce((acc, current) => {
+            if (!acc[`${current.candidate}`]) {
+                acc[`${current.candidate}`] = current.votes;
+                console.log(acc);
+                return acc;
+            }
+
+            acc[`${current.candidate}`] += current.votes;
+            return acc;
+        }, {});
+
+        rbrResults.forEach(el => {
             const index = candidate_option_ids.findIndex(arr => arr.includes(el.candidate));
-            console.log(`index: ${index}`);
             if (index != -1) {
                 if (!stvData[el.round]) {
+                    let color = colors[el.round % 7];
                     const data = Array(index + 1).fill(0);
                     data[index] = el.votes;
                     stvData[el.round] = {
                         type: "bar",
-                        data: data,
+                        data: data.map(it => {
+                            return {
+                                votes: it,
+                                candidate: this._stvChartLabels[index],
+                                color: color,
+                                hoverBackgroundColor: color,
+                                round: el.round,
+                                quota: this.poll.quota
+                            };
+                        }),
                         label: `Round ${el.round + 1}`,
-                        backgroundColor: colors[el.round % 7]
                     };
                 } else {
-                    stvData[el.round].data[index] = el.votes;
+                    console.log(stvData[el.round]);
+                    stvData[el.round].data[index] = {
+                        votes: el.votes,
+                        candidate: this._stvChartLabels[index],
+                        color: stvData[el.round].data[0].color,
+                        hoverBackgroundColor: stvData[el.round].data[0].color,
+                        round: el.round,
+                        quota: this.poll.quota
+                    };
                 }
             }
         });
+
         stvData.push({
             type: "line",
             data: Array(this._stvChartLabels.length).fill(this.poll.quota),

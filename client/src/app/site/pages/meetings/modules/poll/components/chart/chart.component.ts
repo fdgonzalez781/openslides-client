@@ -1,6 +1,48 @@
 import { Component, Input } from '@angular/core';
 import { ChartjsComponent } from '@coreui/angular-chartjs';
-import { ChartData as NgChartData, ChartOptions, ChartType } from 'chart.js';
+import { ChartData as NgChartData, ChartOptions, ChartType, Interaction, InteractionModeFunction } from 'chart.js';
+import { getRelativePosition } from 'chart.js/helpers';
+
+declare module 'chart.js' {
+    interface InteractionModeMap {
+        customMode: InteractionModeFunction;
+    }
+}
+
+
+Interaction.modes.customMode = function(chart, e, options, useFinalPosition) {
+    const position = getRelativePosition(e, chart);
+    const items = Interaction.modes.dataset(chart, e, options, useFinalPosition);
+    if (items.length > 0) {
+        let previousRound = items[0].datasetIndex - 1;
+        let eliminatedCandidate = "";
+        if (previousRound >= 0) {
+            const data = chart.getDatasetMeta(previousRound).data;
+            console.log(items.map(it => it.element["$context"].raw.candidate));
+            // console.log(data);
+            for (let i = 0; i < data.length; ++i) {
+                if (!items.map(it => it.element["$context"].raw.candidate).includes(data[i]["$context"].raw.candidate)) {
+                    eliminatedCandidate = data[i]["$context"].raw.candidate;
+                    items.push({ element: data[i], datasetIndex: previousRound, index: i })
+                }
+            }
+        }
+
+        if (eliminatedCandidate !== "" && previousRound - 1 >= 0) {
+            for (let r = previousRound - 1; r >= 0; r--) {
+                const data = chart.getDatasetMeta(r).data;
+                const i = data.findIndex(it => it["$context"].raw.candidate === eliminatedCandidate);
+                items.push({ element: data[i], datasetIndex: r, index: i });
+            }
+        }
+    }
+    // Interaction.evaluateInteractionItems(chart, 'x', position, (element, datasetIndex, index) => {
+    //     if (element.inXRange(position.x, useFinalPosition)) {
+    //         items.push({ element, datasetIndex, index });
+    //     }
+    // });
+    return items;
+};
 
 export type ChartData = ChartDate[];
 
@@ -9,8 +51,8 @@ export type ChartData = ChartDate[];
  */
 export interface ChartDate {
     type: ChartType;
-    data: number[];
-    label: string;
+    data: any[];
+    label?: string;
     backgroundColor?: string;
     hoverBackgroundColor?: string;
     borderColor?: string;
@@ -57,6 +99,12 @@ export class ChartComponent {
         this.colors = colors;
         this._circleColors = colors;
     }
+
+    /**
+     * Threshold for STV charts = quota
+     */
+    @Input()
+    public threshold = 4;
 
     private _circleColors: { backgroundColor?: string[]; hoverBackgroundColor?: string[] }[];
 
@@ -151,10 +199,55 @@ export class ChartComponent {
                     point: {
                         radius: 0
                     },
+                    bar: {
+                        backgroundColor: this.colorize
+                    }
+                },
+                parsing: {
+                    xAxisKey: 'votes',
+                    yAxisKey: 'candidate'
+                },
+                interaction: {
+                    // mode: 'dataset'
+                    mode: 'customMode'
                 },
             };
         }
     }
+
+    private colorize(ctx, options) {
+        function transparentize(color: string, alpha: number): string {
+            let rgbaValues = color.substring(5, color.length - 1).split(",").map(it => +it.trim());
+            const newValues = rgbaValues.map(it => it * alpha)
+            return `rgba(${rgbaValues[0]}, ${rgbaValues[1]}, ${rgbaValues[2]}, ${newValues[3]})`;
+        }
+
+        const totalVotes = Object.values(ctx.parsed._stacks.x._visualValues).reduce((a: number, b: number) => a + b) as number;
+        const color = ctx.raw.color;
+
+        if (ctx.active) {
+            // console.log(ctx);
+            const latestRound = Math.max(...ctx.chart._active.map(it => it.datasetIndex));
+            const next = ctx.raw.round + 1;
+            const stillInRunning = ctx.chart.getDatasetMeta(next).data.map(it => it.$context.raw).some(it => it.candidate === ctx.raw.candidate);
+            if (ctx.raw.round < latestRound /* && !stillInRunning */) {
+                return "rgba(204, 108, 91, 1)";
+            }
+
+            if (ctx.raw.round === latestRound) {
+                return "rgba(76, 175, 80, 1)";
+            }
+
+            return transparentize(color, 0.3);
+        }
+
+        if (totalVotes < ctx.raw.quota && !ctx.active) {
+            return transparentize(color, 0.2);
+        }
+
+        return transparentize(color, 0.7);
+    }
+
 
     public get isReadyToShow(): boolean {
         return !!this.chartData.labels.length;
