@@ -15,30 +15,32 @@ Interaction.modes.customMode = function(chart, e, options, useFinalPosition) {
     const items = Interaction.modes.dataset(chart, e, options, useFinalPosition);
     if (items.length > 0) {
         let previousRound = items[0].datasetIndex - 1;
-        let eliminatedCandidate = "";
-        if (previousRound >= 0) {
-            const data = chart.getDatasetMeta(previousRound).data;
-            for (let i = 0; i < data.length; ++i) {
-                if (!items.map(it => it.element["$context"].raw.candidate).includes(data[i]["$context"].raw.candidate)) {
-                    eliminatedCandidate = data[i]["$context"].raw.candidate;
-                    items.push({ element: data[i], datasetIndex: previousRound, index: i })
-                }
-            }
+        // let eliminatedCandidate = "";
+        // if (previousRound >= 0) {
+        //     const data = chart.getDatasetMeta(previousRound).data;
+        //     for (let i = 0; i < data.length; ++i) {
+        //         if (!items.map(it => it.element["$context"].raw.candidate).includes(data[i]["$context"].raw.candidate)) {
+        //             eliminatedCandidate = data[i]["$context"].raw.candidate;
+        //             items.push({ element: data[i], datasetIndex: previousRound, index: i })
+        //         }
+        //     }
+        // }
+
+        for (let r = previousRound; r >= 0; r--) {
+            const data = chart.getDatasetMeta(r).data;
+            data.forEach((item, i) => {
+                items.push({ element: item, datasetIndex: r, index: i });
+            });
         }
 
-        if (eliminatedCandidate !== "" && previousRound - 1 >= 0) {
-            for (let r = previousRound - 1; r >= 0; r--) {
-                const data = chart.getDatasetMeta(r).data;
-                const i = data.findIndex(it => it["$context"].raw.candidate === eliminatedCandidate);
-                items.push({ element: data[i], datasetIndex: r, index: i });
-            }
-        }
+        // if (eliminatedCandidate !== "" && previousRound - 1 >= 0) {
+        //     for (let r = previousRound - 1; r >= 0; r--) {
+        //         const data = chart.getDatasetMeta(r).data;
+        //         const i = data.findIndex(it => it["$context"].raw.candidate === eliminatedCandidate);
+        //         items.push({ element: data[i], datasetIndex: r, index: i });
+        //     }
+        // }
     }
-    // Interaction.evaluateInteractionItems(chart, 'x', position, (element, datasetIndex, index) => {
-    //     if (element.inXRange(position.x, useFinalPosition)) {
-    //         items.push({ element, datasetIndex, index });
-    //     }
-    // });
     return items;
 };
 
@@ -51,7 +53,7 @@ export interface ChartDate {
     type: ChartType;
     data: any[];
     label?: string;
-    backgroundColor?: string;
+    backgroundColor?: any;
     hoverBackgroundColor?: string;
     borderColor?: string;
     barThickness?: number;
@@ -98,12 +100,6 @@ export class ChartComponent {
         this._circleColors = colors;
     }
 
-    /**
-     * Threshold for STV charts = quota
-     */
-    @Input()
-    public threshold = 4;
-
     private _circleColors: { backgroundColor?: string[]; hoverBackgroundColor?: string[] }[];
 
     public colors: { backgroundColor?: string[]; hoverBackgroundColor?: string[] }[];
@@ -129,9 +125,9 @@ export class ChartComponent {
             return {
                 responsive: true,
                 maintainAspectRatio: false,
-                // animation: {
-                //     duration: 0
-                // },
+                animation: {
+                    duration: 0
+                },
                 plugins: {
                     tooltip: {
                         enabled: false
@@ -147,22 +143,23 @@ export class ChartComponent {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                    duration: 0
+                    duration: 500
                 },
                 scales: {
                     x: {
                         grid: {
                             drawOnChartArea: false
                         },
-                        beginAtZero: true,
                         // ticks: { stepSize: 1 },
                         ticks: {
                             font: {
                                 family: "'OSFont Condensed', 'Fira Sans Condensed', 'Roboto-condensed', 'Arial', 'Helvetica', sans-serif",
                                 size: 16
-                            }
+                            },
                         },
-                        stacked: true
+                        stacked: 'single',
+                        min: 0,
+                        beginAtZero: true
                     },
                     y: {
                         grid: {
@@ -176,7 +173,8 @@ export class ChartComponent {
                             }
                         },
                         // ticks: { mirror: true, labelOffset: -20 },
-                        stacked: true
+                        stacked: true,
+                        beginAtZero: true
                     }
                 },
                 plugins: {
@@ -185,18 +183,52 @@ export class ChartComponent {
                         mode: 'dataset',
                         callbacks: {
                             label: function(tooltipItem) {
-                                console.log(tooltipItem);
                                 let candidate = tooltipItem.label;
-                                let r = tooltipItem.datasetIndex;
                                 let total = 0;
-                                while (r >= 0) {
-                                    const data = tooltipItem.chart.getDatasetMeta(r).data.find(it => it["$context"].raw.candidate === candidate);
-                                    total += data["$context"].raw.votes;
-                                    r--;
+                                for (let r = tooltipItem.datasetIndex; r >= 0; r--) {
+                                    const data = tooltipItem.chart.getDatasetMeta(r).data.find(it => it["$context"].raw.candidate === candidate && it["$context"].raw.votes > 0);
+                                    if (data) {
+                                        total += data["$context"].raw.votes;
+                                    }
+                                }
+
+                                if (Object.hasOwn(tooltipItem.raw as any, 'round')) {
+                                    const data = tooltipItem.raw as any
+                                    const afterFirstRound = data.round > 0;
+                                    if (data.votes == 0) {
+                                        return ``;
+                                    }
+                                    const adjustment = data.votes > 0 ? `+${data.votes}` : `${data.votes}`;
+                                    total = data.votes > 0 ? total : total + data.votes;
+                                    return afterFirstRound ? `${candidate}: ${total} (${adjustment})` : `${candidate}: ${total}`;
                                 }
 
                                 return `${candidate}: ${total}`;
                             },
+                            footer: function(tooltipItems) {
+                                const prevRound = tooltipItems[0].datasetIndex - 1;
+                                if (prevRound < 0) {
+                                    return "";
+                                }
+
+                                const eliminatedCandidate = tooltipItems[0].chart.getDatasetMeta(prevRound).data.find(element => {
+                                    const res = element["$context"].raw.result;
+                                    return res.outcome === "elim" && res.round === prevRound + 1;
+                                });
+
+                                if (eliminatedCandidate) {
+                                    let eliminatedVotes = 0;
+                                    for (let r = prevRound; r >= 0; r--) {
+                                        const data = tooltipItems[0].chart.getDatasetMeta(r).data.find(it => it["$context"].raw.candidate === eliminatedCandidate["$context"].raw.candidate && it["$context"].raw.votes > 0);
+                                        if (data) {
+                                            eliminatedVotes += data["$context"].raw.votes;
+                                        }
+                                    }
+                                    return `Eliminated: ${eliminatedCandidate["$context"].raw.candidate} (${eliminatedVotes})`;
+                                } else {
+                                    return "";
+                                }
+                            }
                         }
                     },
                     legend: {
@@ -205,7 +237,10 @@ export class ChartComponent {
                             font: {
                                 family: "'OSFont Condensed', 'Fira Sans Condensed', 'Roboto-condensed', 'Arial', 'Helvetica', sans-serif"
                             }
-                        }
+                        },
+                        onClick: null,
+                        onHover: this.handleChartHover,
+                        onLeave: this.handleLeave
                     },
                 },
                 indexAxis: 'y',
@@ -213,17 +248,18 @@ export class ChartComponent {
                     point: {
                         radius: 0
                     },
-                    bar: {
-                        backgroundColor: this.colorize
-                    }
+                    // bar: {
+                    //     backgroundColor: this.fadeEliminated,
+                    // }
                 },
                 parsing: {
                     xAxisKey: 'votes',
                     yAxisKey: 'candidate'
                 },
-                hover: {
-                    mode: 'customMode'
-                },
+                onHover: this.handleChartHover,
+                // hover: {
+                //     mode: 'customMode'
+                // },
                 // interaction: {
                 //     mode: 'customMode'
                 // },
@@ -231,38 +267,167 @@ export class ChartComponent {
         }
     }
 
-    private colorize(ctx, options) {
-        function transparentize(color: string, alpha: number): string {
+    private handleChartHover(evt, active, chartRef) {
+        let item;
+        if (Array.isArray(active)) {
+            item = active[0];
+        } else {
+            item = active;
+        }
+
+        let chart;
+        if (Object.hasOwn(chartRef, "chart")) {
+            chart = chartRef.chart;
+        } else {
+            chart = chartRef;
+        }
+
+        //const item = active[0];
+        if (!item) {
+            chart.data.datasets.filter(it => it.type === "bar").forEach(dataset => {
+                const colors = dataset.data.map(element => element.result.outcome === "elect" ? element.color : setAlpha(element.color, 0.4));
+                dataset.backgroundColor = colors;
+            });
+
+            chart.update();
+            return;
+        }
+
+        function setAlpha(color: string, alpha: number): string {
             let rgbaValues = color.substring(5, color.length - 1).split(",").map(it => +it.trim());
-            const newValues = rgbaValues.map(it => it * alpha)
-            return `rgba(${rgbaValues[0]}, ${rgbaValues[1]}, ${rgbaValues[2]}, ${newValues[3]})`;
+            return `rgba(${rgbaValues[0]}, ${rgbaValues[1]}, ${rgbaValues[2]}, ${alpha})`;
         }
 
-        const totalVotes = Object.values(ctx.parsed._stacks.x._visualValues).reduce((a: number, b: number) => a + b) as number;
-        const color = ctx.raw.color;
+        const colorGainedVotes = "rgba(76, 175, 80, 1)";
+        const colorLostVotes = "rgba(204, 108, 91, 1)";
 
-        if (ctx.active) {
-            const latestRound = Math.max(...ctx.chart._active.map(it => it.datasetIndex));
-            const next = ctx.raw.round + 1;
-            const stillInRunning = ctx.chart.getDatasetMeta(next).data.map(it => it.$context.raw).some(it => it.candidate === ctx.raw.candidate);
-            if (ctx.raw.round < latestRound /* && !stillInRunning */) {
-                return "rgba(204, 108, 91, 1)";
+        chart.data.datasets.filter(it => it.type === "bar").forEach(dataset => {
+            const setRound = dataset.data[0].round;
+            // let colors = dataset.backgroundColor;
+            let colors = dataset.data.map(element => setAlpha(element.color, 0.3));
+
+            // Color bars from the current round green, and fade out otherwise
+            if (setRound === item.datasetIndex) {
+                dataset.data.forEach((element, index) => {
+                    console.log(element.votes);
+                    if (element.votes > 0) {
+                        colors[index] = colorGainedVotes;
+                    } else {
+                        colors[index] = colorLostVotes;
+                    }
+                })
             }
 
-            if (ctx.raw.round === latestRound) {
-                return "rgba(76, 175, 80, 1)";
+            if (setRound < item.datasetIndex) {
+                dataset.data.forEach((element, index) => {
+                    if (element.result.outcome === "elim") {
+                        // Color all bars from newly eliminated candidates red
+                        if (element.result.round === item.datasetIndex) {
+                            colors[index] = colorLostVotes;
+                        }
+
+                        // Hide all bars from candidates that have already been eliminated in a previous round
+                        if (element.result.round < item.datasetIndex) {
+                            colors[index] = setAlpha(element.color, 0);
+                        }
+                    }
+                });
             }
 
-            return transparentize(color, 0.3);
-        }
+            if (setRound > item.datasetIndex) {
+                dataset.data.forEach((element, index) => {
+                    colors[index] = setAlpha(element.color, 0);
+                });
+            }
 
-        if (totalVotes < ctx.raw.quota && !ctx.active) {
-            return transparentize(color, 0.2);
-        }
+            dataset.backgroundColor = colors;
+        });
 
-        return transparentize(color, 0.7);
+        chart.update();
     }
 
+    private handleHover(evt, item, legend) {
+        if (item.text === "Quota") {
+            return;
+        }
+
+        this.handleChartHover(evt, [item], legend.chart);
+    }
+
+    private handleXHover(evt, item, legend) {
+        if (item.text === "Quota") {
+            return;
+        }
+
+        function setAlpha(color: string, alpha: number): string {
+            let rgbaValues = color.substring(5, color.length - 1).split(",").map(it => +it.trim());
+            return `rgba(${rgbaValues[0]}, ${rgbaValues[1]}, ${rgbaValues[2]}, ${alpha})`;
+        }
+
+        const colorGainedVotes = "rgba(76, 175, 80, 1)";
+        const colorLostVotes = "rgba(204, 108, 91, 1)";
+
+        legend.chart.data.datasets.filter(it => it.type === "bar").forEach(dataset => {
+            const setRound = dataset.data[0].round;
+            let colors = dataset.backgroundColor;
+
+            // Color bars from the current round green, and fade out otherwise
+            if (setRound === item.datasetIndex) {
+                dataset.data.forEach((element, index) => {
+                    console.log(element.votes);
+                    if (element.votes > 0) {
+                        colors[index] = colorGainedVotes;
+                    } else {
+                        colors[index] = colorLostVotes;
+                    }
+                });
+            }
+
+            if (setRound < item.datasetIndex) {
+                dataset.data.forEach((element, index) => {
+                    if (element.result.outcome === "elim") {
+                        // Color all bars from newly eliminated candidates red
+                        if (element.result.round === item.datasetIndex) {
+                            colors[index] = colorLostVotes;
+                        }
+
+                        // Hide all bars from candidates that have already been eliminated in a previous round
+                        if (element.result.round < item.datasetIndex) {
+                            colors[index] = setAlpha(colors[index], 0);
+                        }
+                    }
+                });
+            }
+
+            if (setRound > item.datasetIndex) {
+                dataset.data.forEach((_, index) => {
+                    colors[index] = setAlpha(colors[index], 0);
+                });
+            }
+
+            dataset.backgroundColor = colors;
+        });
+
+        legend.chart.update();
+    }
+
+    private handleLeave(evt, item, legend) {
+        if (item.text === "Quota") {
+            return;
+        }
+
+        function setAlpha(color: string, alpha: number): string {
+            let rgbaValues = color.substring(5, color.length - 1).split(",").map(it => +it.trim());
+            return `rgba(${rgbaValues[0]}, ${rgbaValues[1]}, ${rgbaValues[2]}, ${alpha})`;
+        }
+
+        legend.chart.data.datasets.filter(it => it.type === "bar").forEach(dataset => {
+            const colors = dataset.data.map((element, index) => element.result.outcome === "elect" ? element.color : setAlpha(element.color, 0.4));
+            dataset.backgroundColor = colors;
+        });
+
+        legend.chart.update();
+    }
 
     public get isReadyToShow(): boolean {
         return !!this.chartData.labels.length;

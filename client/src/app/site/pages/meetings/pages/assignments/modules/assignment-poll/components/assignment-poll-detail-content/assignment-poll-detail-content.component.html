@@ -119,11 +119,15 @@
                                 [buttonList]="buttonElements"
                                 [ngClass]="getVoteClass(vote)"
                             >
-                                @if (vote.showPercent) {
+                                @if (vote.showPercent && !isMethodSTV) {
                                     {{ getVoteAmount(vote, row) | pollPercentBase: poll : row }}
                                 }
                                 @if (['user', 'list'].includes(row.class)) {
-                                    {{ getVoteAmount(vote, row) | pollParseNumber }}
+                                    @if (!isMethodSTV) {
+                                        {{ getVoteAmount(vote, row) | pollParseNumber }}
+                                    } @else {
+                                        Elected
+                                    }
                                 }
                                 @if (!['user', 'list'].includes(row.class)) {
                                     {{ vote.amount | pollParseNumber }}

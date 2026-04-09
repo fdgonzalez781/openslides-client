@@ -115,6 +115,13 @@ export abstract class PollService {
                 return pollTableEntry;
             })
             .filter(it => poll.pollmethod !== 'STV' || it.value[0].amount >= poll.quota);
+        // .map(it => {
+        //     if (poll.pollmethod !== 'STV') {
+        //         return it;
+        //     }
+
+
+        // });
 
         console.log(tableData);
         tableData.push(...this.formatVotingResultToTableData(this.getGlobalVoteKeys(poll), poll));

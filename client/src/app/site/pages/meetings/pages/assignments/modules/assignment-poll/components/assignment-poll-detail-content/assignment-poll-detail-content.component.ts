@@ -243,21 +243,48 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
         });
     }
 
+    private setAlpha(color: string, alpha: number): string {
+        let rgbaValues = color.substring(5, color.length - 1).split(",").map(it => +it.trim());
+        return `rgba(${rgbaValues[0]}, ${rgbaValues[1]}, ${rgbaValues[2]}, ${alpha})`;
+    }
+
     private setChartData(): void {
         this._chartData = this.pollService.generateChartData(this.poll).filter(option => option.data[0] > 0);
         const candidate_option_ids: number[][] = this.assignment?.candidatesAsUsers.map(it => it.option_ids.map(it => +it));
         this._stvChartLabels = this.assignment?.candidatesAsUsers.map(it => it.name);
+        console.log(this.assignment?.candidatesAsUsers);
 
         const colors = ["rgba(54, 162, 235, 0.8)", "rgba(254, 99, 131, 0.8)", "rgba(74, 192, 192, 0.8)", "rgba(255, 159, 64, 0.8)", "rgba(153, 102, 255, 0.8)", "rgba(255, 204, 85, 0.8)", "rgba(202, 203, 207, 0.8)"]
 
         const stvData: ChartData = []
         console.log(this.poll.round_by_round);
-        const rbrResults = this.poll.round_by_round.map(it => {
+        const rbrResults = [];
+        const elected = [];
+        const eliminated = [];
+        this.poll.round_by_round.forEach(it => {
             const elements = it.split("/");
-            return {
-                round: +elements[0],
-                candidate: +elements[1],
-                votes: parseFloat(elements[2])
+            if (isNaN(+elements[2])) {
+                const el = {
+                    round: +elements[0],
+                    candidate: +elements[1],
+                    result: elements[2]
+                };
+
+                console.log(el);
+
+                if (el.result === "elect") {
+                    console.log(`Elected: ${el.candidate}, round ${el.round}`);
+                    elected.push(el);
+                } else {
+                    console.log(`Eliminated: ${el.candidate}, round ${el.round}`);
+                    eliminated.push(el);
+                }
+            } else {
+                rbrResults.push({
+                    round: +elements[0],
+                    candidate: +elements[1],
+                    votes: +elements[2]
+                });
             }
         });
         console.log(rbrResults);
@@ -273,13 +300,28 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
             return acc;
         }, {});
 
+        elected.forEach(el => {
+            const surplus = finalResults[`${el.candidate}`] - this.poll.quota;
+            if (surplus > 0) {
+                rbrResults.push({
+                    round: el.round,
+                    candidate: el.candidate,
+                    votes: -surplus
+                });
+            }
+        });
+
         rbrResults.forEach(el => {
             const index = candidate_option_ids.findIndex(arr => arr.includes(el.candidate));
             if (index != -1) {
+                const resultObj = elected.map(it => it.candidate).includes(el.candidate) ? elected.find(it => it.candidate === el.candidate) : eliminated.find(it => it.candidate === el.candidate);
                 if (!stvData[el.round]) {
-                    let color = colors[el.round % 7];
+                    let color = colors[el.round % colors.length];
                     const data = Array(index + 1).fill(0);
+                    const cols = Array(index + 1).fill(color);
+                    const candidate = this._stvChartLabels[index];
                     data[index] = el.votes;
+                    cols[index] = resultObj.result === "elect" ? color : this.setAlpha(color, 0.3);
                     stvData[el.round] = {
                         type: "bar",
                         data: data.map(it => {
@@ -287,26 +329,37 @@ export class AssignmentPollDetailContentComponent implements OnInit, AfterViewIn
                                 votes: it,
                                 candidate: this._stvChartLabels[index],
                                 color: color,
-                                hoverBackgroundColor: color,
                                 round: el.round,
+                                result: resultObj ? { outcome: resultObj.result, round: resultObj.round } : null,
                                 quota: this.poll.quota
                             };
                         }),
                         label: `Round ${el.round + 1}`,
+                        backgroundColor: cols,
                     };
                 } else {
                     console.log(stvData[el.round]);
+                    const color = stvData[el.round].data[0].color;
                     stvData[el.round].data[index] = {
                         votes: el.votes,
                         candidate: this._stvChartLabels[index],
-                        color: stvData[el.round].data[0].color,
-                        hoverBackgroundColor: stvData[el.round].data[0].color,
+                        color: color,
                         round: el.round,
+                        result: resultObj ? { outcome: resultObj.result, round: resultObj.round } : null,
                         quota: this.poll.quota
                     };
+                    stvData[el.round].backgroundColor[index] = resultObj.result === "elect" ? color : this.setAlpha(color, 0.3);
                 }
             }
         });
+
+        console.log(stvData);
+
+        if (stvData[stvData.length - 1].data.length == 1 && stvData[stvData.length - 1].data[0].votes < 0) {
+            stvData.pop();
+        }
+
+        console.log(stvData);
 
         stvData.push({
             type: "line",
